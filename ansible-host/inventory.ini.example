@@ -1,0 +1,12 @@
+[linux_test]
+linux-server01.example.internal ansible_host=192.0.2.11
+
+[linux_prod]
+linux-server02.example.internal ansible_host=192.0.2.21
+
+[linux:children]
+linux_test
+linux_prod
+
+[linux:vars]
+ansible_python_interpreter=auto_silent
