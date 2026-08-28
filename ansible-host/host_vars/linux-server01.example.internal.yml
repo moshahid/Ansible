@@ -1,0 +1,19 @@
+---
+onepassword_vault: "Linux-Servers"
+onepassword_item_id: "REPLACE_WITH_1PASSWORD_ITEM_ID"
+
+ansible_user: >-
+  {{ lookup(
+       'community.general.onepassword',
+       onepassword_item_id,
+       field='username',
+       vault=onepassword_vault
+     ) }}
+
+ansible_password: >-
+  {{ lookup(
+       'community.general.onepassword',
+       onepassword_item_id,
+       field='password',
+       vault=onepassword_vault
+     ) }}
