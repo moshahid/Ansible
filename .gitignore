@@ -1,0 +1,25 @@
+# Ansible secrets and runtime artifacts
+credentials.yml
+**/credentials.yml
+*.vault
+.vault_pass
+*.retry
+*.log
+
+# 1Password and environment secrets
+.env
+.env.*
+.op/
+**/.op/
+*service-account-token*
+
+# SSH material
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Local caches
+__pycache__/
+*.pyc
+.ansible/
