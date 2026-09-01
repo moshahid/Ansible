@@ -1,0 +1,48 @@
+---
+- name: Upload an automation log to a ServiceNow change record
+  hosts: linux_servers
+  gather_facts: false
+
+  vars:
+    servicenow_instance: https://example.service-now.com
+    log_file_path: "/var/log/automation/package_update.log"
+
+  vars_prompt:
+    - name: change_ticket_number
+      prompt: "Enter the change ticket number"
+      private: false
+
+    - name: servicenow_user
+      prompt: "Enter the ServiceNow username"
+      private: false
+
+    - name: servicenow_password
+      prompt: "Enter the ServiceNow password"
+      private: true
+
+  tasks:
+    - name: Read log file
+      ansible.builtin.slurp:
+        src: "{{ log_file_path }}"
+      register: automation_log
+
+    - name: Update change record with log content
+      ansible.builtin.uri:
+        url: >-
+          {{ servicenow_instance }}/api/now/table/change_request/{{ change_ticket_number }}
+        method: PATCH
+        force_basic_auth: true
+        user: "{{ servicenow_user }}"
+        password: "{{ servicenow_password }}"
+        headers:
+          Content-Type: application/json
+        body_format: json
+        body:
+          u_log_file: "{{ automation_log.content | b64decode }}"
+        status_code: 200
+      register: servicenow_response
+      no_log: true
+
+    - name: Confirm successful upload
+      ansible.builtin.debug:
+        msg: "ServiceNow returned HTTP {{ servicenow_response.status }}"

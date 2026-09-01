@@ -1,0 +1,32 @@
+---
+- name: Find Oracle network configuration files
+  hosts: all
+  gather_facts: false
+
+  vars:
+    oracle_search_paths:
+      - /etc
+      - /var/opt/oracle
+      - /u01/app/oracle
+      - /opt/oracle
+
+  tasks:
+    - name: Find tnsnames.ora files
+      ansible.builtin.find:
+        paths: "{{ oracle_search_paths }}"
+        patterns: tnsnames.ora
+        recurse: true
+      register: tnsnames_files
+
+    - name: Display matching paths
+      ansible.builtin.debug:
+        msg: "Found tnsnames.ora at {{ item.path }}"
+      loop: "{{ tnsnames_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Add matching hosts to a temporary group
+      ansible.builtin.add_host:
+        name: "{{ inventory_hostname }}"
+        groups: tnsnames_hosts
+      when: tnsnames_files.matched | int > 0

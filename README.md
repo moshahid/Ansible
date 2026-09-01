@@ -1,22 +1,17 @@
 # Ansible Automation Controller
 
-Sanitized documentation for a RHEL 8.10 Ansible control host integrated with 1Password for runtime credential retrieval.
-
-## Validated software
-
-| Component | Version |
-|---|---:|
-| RHEL | 8.10 |
-| Ansible Core | 2.16.3 |
-| Controller Python | 3.12.14 |
-| 1Password CLI | 2.39.0 |
-| community.general | 11.4.0 |
+Sanitized examples from an Ansible automation controller that retrieves credentials from 1Password at runtime.
 
 ## Repository layout
 
-- `ansible-host/`: sanitized controller, inventory, and host-variable examples.
-- `1password-integration/`: RHEL installation, service-account, lookup, and security guidance.
+- `ansible-host/`: controller, inventory, and host-variable examples.
+- `1password-integration/`: service-account setup, security guidance, lookup example, and interactive token loader.
+- `playbooks/`: reusable Linux administration, reporting, package-management, and security-agent playbooks.
+
+## Playbook safety
+
+Review the inventory limit and run `--syntax-check` before use. Where supported, run with `--check` against a non-production host first. Vendor packages and customer configuration files are deliberately excluded.
 
 ## Security
 
-This public repository contains examples only. It intentionally excludes real hostnames, domains, IP addresses, vault names, item IDs, usernames, passwords, service-account tokens, private keys, encrypted credential files, and organization identifiers.
+This public repository contains examples only. It excludes real hostnames, domains, IP addresses, vault names, item IDs, usernames, passwords, service-account tokens, private keys, encrypted credential files, customer configuration files, packages, and organization identifiers.

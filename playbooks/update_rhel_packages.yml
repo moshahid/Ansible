@@ -1,0 +1,36 @@
+---
+- name: Update packages on RHEL-family systems
+  hosts: rhel_servers
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Verify target OS family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "RedHat"
+        fail_msg: "This playbook supports only RHEL-family systems."
+
+    - name: Create automation log directory
+      ansible.builtin.file:
+        path: /var/log/automation
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Update installed packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+      register: package_update
+
+    - name: Record update summary
+      ansible.builtin.copy:
+        content: "{{ package_update.results | default([]) | to_nice_json }}\n"
+        dest: /var/log/automation/package_update.json
+        owner: root
+        group: root
+        mode: "0640"
+      when: package_update.changed

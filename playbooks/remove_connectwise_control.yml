@@ -1,0 +1,40 @@
+---
+- name: Remove ConnectWise Control agent
+  hosts: linux_servers
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Find installed package
+      ansible.builtin.shell:
+        cmd: "set -o pipefail && rpm -qa | grep '^connectwisecontrol-'"
+        executable: /bin/bash
+      register: connectwise_package
+      changed_when: false
+      failed_when: connectwise_package.rc not in [0, 1]
+
+    - name: Remove package without running package scripts
+      ansible.builtin.command:
+        argv:
+          - rpm
+          - --erase
+          - --noscripts
+          - "{{ connectwise_package.stdout }}"
+      when: connectwise_package.stdout | length > 0
+
+    - name: Remove known residual directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/connectwisecontrol
+        - /opt/connectwisecontrol
+        - /usr/local/connectwisecontrol
+
+    - name: Verify package removal
+      ansible.builtin.shell:
+        cmd: "set -o pipefail && rpm -qa | grep '^connectwisecontrol-'"
+        executable: /bin/bash
+      register: removal_check
+      changed_when: false
+      failed_when: removal_check.rc == 0

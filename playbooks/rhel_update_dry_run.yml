@@ -1,0 +1,28 @@
+---
+- name: Test a RHEL package update transaction
+  hosts: rhel_servers
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Create automation log directory
+      ansible.builtin.file:
+        path: /var/log/automation
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Run transaction test without installing updates
+      ansible.builtin.shell:
+        cmd: >-
+          set -o pipefail &&
+          dnf update --assumeyes --setopt=tsflags=test |
+          tee /var/log/automation/package_update_dry_run.log
+        executable: /bin/bash
+      register: update_test
+      changed_when: false
+
+    - name: Display dry-run log path
+      ansible.builtin.debug:
+        msg: /var/log/automation/package_update_dry_run.log

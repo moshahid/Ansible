@@ -1,0 +1,15 @@
+---
+- name: Check operating system distribution
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Display OS information
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Distribution: {{ ansible_distribution }}"
+          - "Version: {{ ansible_distribution_version }}"
+          - "OS family: {{ ansible_os_family }}"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Architecture: {{ ansible_architecture }}"

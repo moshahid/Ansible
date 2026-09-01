@@ -1,0 +1,16 @@
+---
+- name: List NFS mounts
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Read mounted NFS filesystems
+      ansible.builtin.command: findmnt --types nfs,nfs4 --output TARGET,SOURCE,FSTYPE,OPTIONS
+      register: nfs_mounts
+      changed_when: false
+      failed_when: nfs_mounts.rc not in [0, 1]
+
+    - name: Display NFS mounts
+      ansible.builtin.debug:
+        var: nfs_mounts.stdout_lines

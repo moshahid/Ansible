@@ -1,0 +1,13 @@
+---
+# Legacy example retained for reference. Prefer ../update_rhel_packages.yml.
+- name: Update packages using the yum compatibility module
+  hosts: rhel_servers
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Update installed packages
+      ansible.builtin.yum:
+        name: "*"
+        state: latest
+        update_only: true

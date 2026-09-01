@@ -1,0 +1,14 @@
+---
+- name: Report host uptime
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Read uptime
+      ansible.builtin.command: uptime
+      register: uptime_output
+      changed_when: false
+
+    - name: Display uptime
+      ansible.builtin.debug:
+        msg: "Uptime for {{ inventory_hostname }}: {{ uptime_output.stdout }}"
