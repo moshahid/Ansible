@@ -1,6 +1,6 @@
 ---
-- name: Install Arctic Wolf Agent on RHEL 8
-  hosts: rhel_servers
+- name: Install Arctic Wolf Agent on supported RHEL systems
+  hosts: all
   become: true
   gather_facts: true
   serial: 1
@@ -13,35 +13,56 @@
     arcticwolf_service: arcticwolfagent.service
 
   pre_tasks:
+    - name: Require an explicit command-line limit
+      ansible.builtin.assert:
+        that:
+          - ansible_limit | default('') | length > 0
+          - ansible_limit | default('all') != "all"
+        fail_msg: >-
+          Refusing to continue without a specific --limit.
+          Specify an inventory group or hostname.
+      run_once: true
+
     - name: Verify supported target
       ansible.builtin.assert:
         that:
           - ansible_os_family == "RedHat"
-          - ansible_distribution_major_version == "8"
+          - ansible_distribution_major_version in ["7", "8", "9"]
           - ansible_architecture == "x86_64"
+        fail_msg: >-
+          Unsupported target: {{ ansible_distribution }}
+          {{ ansible_distribution_version }}
+          {{ ansible_architecture }}
 
-    - name: Verify controller files
+    - name: Check RPM on controller
       ansible.builtin.stat:
-        path: "{{ item }}"
-      loop:
-        - "{{ arcticwolf_local_package }}"
-        - "{{ arcticwolf_local_customer_json }}"
+        path: "{{ arcticwolf_local_package }}"
       delegate_to: localhost
       become: false
       run_once: true
-      register: controller_files
+      register: arcticwolf_package_file
+
+    - name: Check customer configuration on controller
+      ansible.builtin.stat:
+        path: "{{ arcticwolf_local_customer_json }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      register: arcticwolf_customer_file
       no_log: true
 
-    - name: Assert controller files exist
+    - name: Verify required installation files
       ansible.builtin.assert:
-        that: controller_files.results | map(attribute='stat.exists') | min
-        fail_msg: "Package or customer configuration is missing on the controller."
+        that:
+          - arcticwolf_package_file.stat.exists
+          - arcticwolf_customer_file.stat.exists
+        fail_msg: "Arctic Wolf RPM or customer.json is missing"
       run_once: true
 
   tasks:
-    - name: Install and validate agent
+    - name: Install and validate Arctic Wolf Agent
       block:
-        - name: Stage RPM
+        - name: Copy Arctic Wolf RPM
           ansible.builtin.copy:
             src: "{{ arcticwolf_local_package }}"
             dest: "{{ arcticwolf_remote_package }}"
@@ -49,7 +70,7 @@
             group: root
             mode: "0640"
 
-        - name: Stage customer configuration
+        - name: Copy customer configuration
           ansible.builtin.copy:
             src: "{{ arcticwolf_local_customer_json }}"
             dest: "{{ arcticwolf_remote_customer_json }}"
@@ -58,7 +79,19 @@
             mode: "0600"
           no_log: true
 
-        - name: Install RPM
+        - name: Install Arctic Wolf RPM on RHEL 7
+          ansible.builtin.yum:
+            name: "{{ arcticwolf_remote_package }}"
+            state: present
+            disable_gpg_check: true
+          environment:
+            AWN_CUSTOMER_JSON: "{{ arcticwolf_remote_customer_json }}"
+            DISABLE_AGENT_DESKTOP: "true"
+          when:
+            - not ansible_check_mode
+            - ansible_distribution_major_version == "7"
+
+        - name: Install Arctic Wolf RPM on RHEL 8 or 9
           ansible.builtin.dnf:
             name: "{{ arcticwolf_remote_package }}"
             state: present
@@ -66,9 +99,11 @@
           environment:
             AWN_CUSTOMER_JSON: "{{ arcticwolf_remote_customer_json }}"
             DISABLE_AGENT_DESKTOP: "true"
-          when: not ansible_check_mode
+          when:
+            - not ansible_check_mode
+            - ansible_distribution_major_version in ["8", "9"]
 
-        - name: Enable and start service
+        - name: Enable and start Arctic Wolf service
           ansible.builtin.systemd:
             name: "{{ arcticwolf_service }}"
             enabled: true
@@ -76,18 +111,29 @@
             daemon_reload: true
           when: not ansible_check_mode
 
-        - name: Verify active service
-          ansible.builtin.command: systemctl is-active {{ arcticwolf_service }}
-          register: service_status
+        - name: Check Arctic Wolf service
+          ansible.builtin.command:
+            cmd: systemctl is-active "{{ arcticwolf_service }}"
+          register: arcticwolf_service_status
           changed_when: false
-          failed_when: service_status.stdout != "active"
           when: not ansible_check_mode
+
+        - name: Confirm Arctic Wolf service is running
+          ansible.builtin.assert:
+            that:
+              - arcticwolf_service_status.stdout == "active"
+            success_msg: "Arctic Wolf Agent is installed and running"
+            fail_msg: "Arctic Wolf Agent service is not active"
+          when: not ansible_check_mode
+
       always:
-        - name: Remove staged files
+        - name: Remove staged customer configuration
           ansible.builtin.file:
-            path: "{{ item }}"
+            path: "{{ arcticwolf_remote_customer_json }}"
             state: absent
-          loop:
-            - "{{ arcticwolf_remote_customer_json }}"
-            - "{{ arcticwolf_remote_package }}"
           no_log: true
+
+        - name: Remove staged RPM
+          ansible.builtin.file:
+            path: "{{ arcticwolf_remote_package }}"
+            state: absent
