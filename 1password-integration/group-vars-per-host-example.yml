@@ -1,0 +1,26 @@
+---
+# Copy this template into inventory/group_vars/<group_name>.yml.
+# Keep the real file private because vault names and item IDs reveal infrastructure metadata.
+
+managed_host_vault: "EXAMPLE-VAULT"
+
+managed_host_items:
+  app-test-01.example.net: "EXAMPLE-ITEM-ID-01"
+  app-prod-01.example.net: "EXAMPLE-ITEM-ID-02"
+
+ansible_user: sysadmin
+
+ansible_password: >-
+  {{
+    lookup(
+      'community.general.onepassword',
+      managed_host_items[inventory_hostname],
+      field='password',
+      vault=managed_host_vault
+    )
+  }}
+
+# Use this only when SSH and sudo use the same password.
+ansible_become_password: "{{ ansible_password }}"
+
+ansible_python_interpreter: auto_silent
